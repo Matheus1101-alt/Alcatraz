@@ -19,8 +19,9 @@ Preencha com os dados do projeto. Seja curto e específico: tempo no vídeo, cli
 
 ## Áudio: medições
 - Fontes: narração <X> LUFS (<mono/estéreo>), trilha <Y> LUFS, pico <Z> dBTP <(clipada na origem?)>, usada a partir de <s> s.
-- Música sob a voz: <voz_menos_trilha_dB> dB abaixo; variação sob a voz <p95−p5> dB; ducking <modo>, profundidade <dB>.
-- Abertura e final: a música sobe até <dB> do nível da voz.
+- Música sob a voz: <voz_menos_trilha_dB> dB abaixo; bombeamento <bombeamento_dB> dB (variação sob a voz <trilha_variacao_sob_voz_dB> contra <trilha_variacao_propria_dB> da própria faixa); ducking <modo>, redução medida <reducao_ducking_medida_dB> dB.
+- Abertura e final: música a <trilha_abertura_vs_voz_dB> / <trilha_final_vs_voz_dB> dB do nível da voz.
+- Congelado no total: <s> s (<%> do vídeo, sem a abertura).
 - Mixagem final: <final_I> LUFS, <final_TP> dBTP, LRA <final_LRA>.
 - Limitador: atua em <pct>% das janelas de 100 ms, média de <dB>, máximo de <dB>.
 - Avaliação feita só por medição; o áudio não foi ouvido.

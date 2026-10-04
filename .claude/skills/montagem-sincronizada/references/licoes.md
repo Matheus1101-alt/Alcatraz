@@ -34,6 +34,9 @@ Cada item abaixo aconteceu de verdade num projeto e custou retrabalho. Leia ante
 **8. Objeto passando por cima.** Um carimbo atravessava a área do remendo por cerca de 1 s. O remendo "apagaria" o carimbo.
 → Use `desde`/`ate` (quadros de origem) para o remendo só valer com a área livre. Avise no relatório se o texto aparece por alguns quadros antes do remendo entrar.
 
+**8b. Brilho da origem e remendos vizinhos.** Num teste, a primeira origem escolhida era 4,6 níveis mais escura que o entorno, e a costura apareceu. A solução foi dividir em dois remendos, e eles precisam se sobrepor pelo menos 2× a `borda`, senão a junção aparece.
+→ O comando `remendo` mede a diferença de brilho (avisa acima de 4), checa a sobreposição e mostra quadro a quadro a entrada do remendo.
+
 **9. Borda seca alinhada.** Quando o remendo encosta em algo (uma fita adesiva, por exemplo), borda suave cria degradê no objeto.
 → Use `borda_inferior: false` com a borda exatamente no topo do objeto.
 
@@ -46,7 +49,7 @@ Cada item abaixo aconteceu de verdade num projeto e custou retrabalho. Leia ante
 → Calibre o nível **depois** do ducking. O script faz isso: o ganho do ducking depende só da chave, então o nível da trilha muda 1:1 com o ganho.
 
 **12. Bombeamento com a narração crua como chave.** Medido: a música ficava cerca de 20 dB abaixo nas palavras e subia de 12 a 17 dB em cada pausa de 0,5 a 1 s. Somar cópias atrasadas da voz como "hold" não resolveu, porque ainda subia de 4 a 13 dB: o fim das frases é baixo demais.
-→ A chave virou o envelope fala/pausa (pausas menores que 1,2 s preenchidas) com nível fixo. Com isso a variação ficou entre -2 e +2 dB, que é a dinâmica da própria música. Os parâmetros do compressor continuam os pedidos.
+→ A chave virou o envelope fala/pausa (pausas menores que 1,2 s preenchidas) com nível fixo. Os parâmetros do compressor continuam os pedidos. Para saber se ainda bombeia, compare a variação da música com e sem ducking: o render grava `bombeamento_dB` (variação sob a voz menos variação própria da faixa). No primeiro projeto deu 0,0 dB: os 5 dB de variação eram da própria música.
 
 **13. `loudnorm` em modo dinâmico.** Com a voz de TTS (fator de crista de cerca de 19 dB) indo para -14 LUFS, o `loudnorm` de duas passagens caiu no modo dinâmico. Além disso, o AAC levou o pico de -1,5 para -1,2 dBTP.
 → Ganho fixo mais `alimiter` a 4x de taxa (aproxima o pico real) com teto de -2,3 dB, medindo o pico **no AAC** e baixando o teto se precisar. Relate quanto o limitador trabalha (no primeiro projeto: 24% do tempo, média de 2,3 dB, máximo de 5,8 dB).
@@ -59,6 +62,9 @@ Cada item abaixo aconteceu de verdade num projeto e custou retrabalho. Leia ante
 
 ## Processo
 
-**16. Revise a folha de revisão antes de entregar.** O primeiro render tinha três cortes começando dentro do flash ou com jornal falso na tela. Só a folha com o primeiro, o do meio e o último quadro de cada trecho mostrou isso.
+**16. Revise a folha de revisão antes de entregar.** O primeiro render tinha três cortes começando dentro do flash ou com jornal falso na tela. Só a folha com o primeiro, o do meio e o último quadro de cada trecho mostrou isso. Ela, porém, não pega problemas de poucos quadros entre as amostras (num teste, 6 quadros de texto antes de um remendo entrar). Para isso use o `remendo`, ou extraia quadro a quadro.
 
 **17. Você não ouve o áudio.** Toda avaliação de áudio é por medição. Diga isso ao usuário em vez de afirmar que "soa bem".
+
+**18. Fugir de todo texto ruim pode congelar o vídeo.** Num teste, um agente desviou de todos os erros de texto (inclusive de um calendário errado e muito visível) e pagou com 9 s de quadro congelado (14% do vídeo) e cinco trechos a 0,67x. Nenhum congelamento passou de 3 s, então nenhum aviso por trecho disparou.
+→ O `plano` soma o congelamento e avisa acima de 8%. A troca entre mais congelamento sem o erro e mais fluidez com o erro visível é do usuário: mostre as duas opções no plano.

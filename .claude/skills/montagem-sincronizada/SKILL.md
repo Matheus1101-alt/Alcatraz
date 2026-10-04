@@ -24,10 +24,10 @@ Antes de montar o plano, leia `references/licoes.md`. Ela tem os erros reais que
 
 **1. Medir.**
 ```bash
-python3 $SKILL/scripts/montagem.py analisar --clipes <clipes na ordem> --narracao <narr> \
-    [--trilha <trilha>] --saida <projeto>/analise --nome <slug-do-video>
+python3 $SKILL/scripts/montagem.py analisar --clipes <clipes> --narracao <narr> [--trilha <trilha>] \
+    --saida <projeto>/analise --nome <slug-do-video> [--ordenar horario|nome]
 ```
-Os IDs (C01, C02…) seguem a ordem passada. Ordene pelo horário de geração quando o nome do arquivo tiver um. O comando gera `analise.json`, `plano.json` (esqueleto), `folha_de_contato.jpg` e `grade_Cxx.jpg` (1 quadro/s, rotulado com o **número do quadro de origem**). Informe ao usuário duração, resolução e fps de cada clipe, a soma comparada com a narração mais cerca de 5 s de abertura e final, e qualquer mistura de resolução ou fps. Fale também do **flash inicial**: geradores image-to-video costumam começar com 2 a 20 quadros da imagem pronta e depois "piscar". O script dá o `inicio_seguro_quadro`. Por fim, aponte silêncio inicial e clipping na trilha.
+Os IDs (C01, C02…) seguem a ordem passada. Com `--ordenar horario`, seguem o carimbo de data e hora no nome do arquivo (ex.: `..._20261003151242.mp4`), que costuma ser a ordem de geração. O áudio próprio dos clipes é descartado; avise se algum clipe tiver som que o usuário talvez queira manter. O comando gera `analise.json`, `plano.json` (esqueleto), `folha_de_contato.jpg` e `grade_Cxx.jpg` (1 quadro/s, rotulado com o **número do quadro de origem**). Informe ao usuário duração, resolução e fps de cada clipe, a soma comparada com a narração mais cerca de 5 s de abertura e final, e qualquer mistura de resolução ou fps. Fale também do **flash inicial**: geradores image-to-video costumam começar com 2 a 20 quadros da imagem pronta e depois "piscar". O script dá o `inicio_seguro_quadro`. Por fim, aponte silêncio inicial e clipping na trilha.
 
 **2. Olhar.** Abra a folha de contato e **todas** as grades. Descreva cada clipe em uma linha e anote em que quadro o elemento-chave aparece e em que quadro a cena assenta. O plano inteiro depende disso.
 
@@ -42,7 +42,7 @@ ffmpeg -v error -i CLIP.mp4 -vf "scale=480:-2,drawtext=text='%{n}':x=6:y=6:fonts
 ```
 
 **4. Transcrever e alinhar.**
-- Se houver roteiro, salve como `transcricao.txt` e confira se bate com o áudio.
+- Se houver roteiro, salve como `transcricao.txt`. Para conferir se ele bate com o áudio sem pagar transcrição, use o `alinhar` do passo seguinte: com o texto certo, a velocidade de fala fica coerente (nenhuma linha com ⚠) e cada frase cai numa pausa clara. Várias linhas com ⚠, ou o erro "há N frases mas só M pausas", indicam que o texto não é o que foi gravado. Pergunte ao usuário antes de seguir.
 - Se não houver, use o ElevenLabs (MCP), nesta ordem:
   1. `creative_create_flow`.
   2. `creative_create_asset_upload` com nome, mime e tamanho exato em bytes.
@@ -59,6 +59,8 @@ ffmpeg -v error -i CLIP.mp4 -vf "scale=480:-2,drawtext=text='%{n}':x=6:y=6:fonts
 
 Preencha `cortes` no `plano.json`. Cada item é `{"frase": n, "clipe": "Cxx", "de": q_inicial, "ate": q_final, "nota": "..."}`. O trecho vai do início da frase `n` até o início da frase do item seguinte. Os quadros são do clipe de origem (quadro = segundo × fps).
 
+O primeiro corte sempre começa em 0 e inclui a abertura. O quadro parado da abertura é o quadro `de` do primeiro corte, então escolha esse quadro pensando também em como ele fica parado com fade-in.
+
 Como escolher:
 - **Pelo conteúdo, não pela ordem de envio.** Se a narração é cronológica, reordene os clipes.
 - **Uma frase por clipe** quando possível. Uma janela curta (menos de 2,5 s) se junta à frase vizinha.
@@ -67,10 +69,11 @@ Como escolher:
   - fuja dos intervalos com texto ruim;
   - mostre o elemento-chave, que normalmente fica no final, onde a cena já montou;
   - prefira cortar o trecho e manter 1x. Acelere (até 1,33x) só quando a montagem da cena for o ponto da frase. Desacelere até 0,67x; abaixo disso o script congela o último quadro.
+- **Congelamento somado importa.** Cada congelamento pode ficar abaixo de 3 s e o vídeo ainda parecer parado. Num teste, desviar de todo texto ruim custou 9 s congelados (14% do vídeo) e cinco trechos a 0,67x. O `plano` soma tudo e avisa acima de 8%. Quando fugir de um erro de texto custa muito congelamento, não decida sozinho: mostre as duas opções ao usuário (mais congelado e sem o erro, ou mais fluido com o erro visível).
 - **Estética:** em colagem de papel e stop-motion, quadro duplicado combina com o estilo. Em estética cinematográfica ou live-action, duplicar quadro a 0,67x fica travado; mantenha entre cerca de 0,85x e 1,15x e prefira cortar.
 - **Cobertura:** liste as frases sem clipe que as ilustre e as repetições de clipe. Para cada lacuna, proponha **o clipe a gerar**: duração necessária, descrição explícita dos objetos (evite palavras ambíguas) e "nenhum texto legível". O texto pode entrar depois, na edição.
 
-Rode `python3 $SKILL/scripts/montagem.py plano <projeto>/analise/plano.json` e itere até não sobrar aviso que você não saiba justificar. Os avisos cobrem velocidade fora dos limites, congelamento acima de 3 s, trecho abaixo de 2,5 s, início dentro do flash, quadro final além do fim do clipe e repetição de clipe.
+Rode `python3 $SKILL/scripts/montagem.py plano <projeto>/analise/plano.json` e itere até não sobrar aviso que você não saiba justificar. Os avisos cobrem velocidade fora dos limites, congelamento acima de 3 s por trecho ou de 8% somado, trecho abaixo de 2,5 s, início dentro do flash, quadro final além do fim do clipe e repetição de clipe. Se aparecer "analise.json não encontrado", os avisos de flash estão desligados: corrija o caminho `analise` no plano.
 
 Mostre ao usuário, sem renderizar:
 1. A tabela que o comando `plano` imprime: tempo, narração, clipe (quadros), velocidade, congelamento.
@@ -85,10 +88,10 @@ Depois **espere a aprovação**. Repetir um clipe ou gerar um novo é decisão d
 **Remendos (opcional)** servem para texto ruim sobre fundo liso, como uma tira de papel em página lisa. O script copia um retângulo de papel limpo do mesmo quadro por cima do texto. Defina em `remendos.Cxx`: `{x, y, w, h, sx, sy, borda, [borda_inferior: false], [desde: q], [ate: q]}`.
 - Ache as coordenadas num quadro em resolução cheia, ampliado com `drawgrid`.
 - O retângulo precisa cobrir a tira **e a sombra** com folga maior que `borda`. Se não cobrir, o contorno da tira reaparece como fantasma.
-- A origem (`sx`, `sy`) deve ser papel liso, com brilho parecido e sem nada se movendo por ela.
+- A origem (`sx`, `sy`) deve ser papel liso, sem nada se movendo por ela, e com brilho até cerca de 4 níveis do entorno. Se nenhuma área serve para o retângulo inteiro, divida em dois remendos que se sobreponham pelo menos 2× a `borda`.
 - Se algo passa por cima da área (um carimbo, uma mão), use `desde`/`ate` para o remendo só valer quando a área estiver livre.
 - Use `borda_inferior: false` para alinhar uma borda seca a uma borda que já existe, como o topo de uma fita adesiva.
-- Confira sempre com um recorte antes/depois.
+- **Confira sempre** com `python3 $SKILL/scripts/montagem.py remendo <plano> --clipe Cxx [--quadro N]`. Ele gera o antes/depois, compara o brilho da origem com o entorno, checa a sobreposição entre remendos e mostra quadro a quadro a entrada e a saída (`desde`/`ate`). A folha de revisão do render não mostra esses poucos quadros.
 
 Não remende texto sobre fundo com textura ou movimento: fica pior que o erro. Nesse caso, recomende gerar o clipe de novo.
 
@@ -96,9 +99,9 @@ Não remende texto sobre fundo com textura ou movimento: fica pior que o erro. N
 ```bash
 python3 $SKILL/scripts/montagem.py render <projeto>/analise/plano.json --saida <projeto>/entrega
 ```
-Ele gera `<nome>.mp4`, `<nome>_revisao.jpg`, `medicoes.json` e `mapa_de_corte.md`.
+Ele gera na entrega `<nome>.mp4`, `<nome>_revisao.jpg`, `medicoes.json`, `mapa_de_corte.md`, uma cópia de `montagem.py` e um `plano.json` com caminhos absolutos, que continua achando os arquivos e a análise. Os intermediários ficam em `<pasta do plano>/_trabalho`, fora da entrega.
 
-**Revise antes de entregar.** Abra `<nome>_revisao.jpg`, que mostra o primeiro, o do meio e o último quadro de cada trecho. Procure flash, texto ruim, saltos e trecho mostrando a coisa errada. No primeiro projeto essa revisão pegou três cortes que começavam no lugar errado. Corrija, renderize de novo e revise de novo.
+**Revise antes de entregar.** Abra `<nome>_revisao.jpg`, que mostra o primeiro, o do meio e o último quadro de cada trecho. Procure flash, texto ruim, saltos e trecho mostrando a coisa errada. No primeiro projeto essa revisão pegou três cortes que começavam no lugar errado. Ela não pega problemas de poucos quadros entre as amostras, como texto aparecendo antes de um remendo entrar; para isso serve o `remendo`. Corrija, renderize de novo e revise de novo. Cada render leva uns 2 a 3 minutos para um vídeo de 1 minuto.
 
 ## Etapa 4: Áudio (o render faz; você interpreta e relata)
 
@@ -110,22 +113,20 @@ Os padrões, e por que existem:
 - **Trilha começando onde tem corpo** (`trilha_inicio_s`; o `analisar` sugere um valor), com fade-in junto do vídeo e fade-out nos últimos 2,5 s.
 
 Relate os números de `medicoes.json`:
-- `voz_menos_trilha_dB`, `trilha_variacao_sob_voz_p95_p5_dB` e `limitador_*`;
-- `final_I` e `final_TP`;
-- quanto a música sobe na abertura e no final.
+- `voz_menos_trilha_dB`: a diferença pedida, integrada na janela de fala.
+- `bombeamento_dB`: variação da música sob a voz (`trilha_variacao_sob_voz_dB`) menos a variação da própria faixa sem ducking (`trilha_variacao_propria_dB`). Perto de 0 quer dizer que a variação é da música, não do ducking. Acima de cerca de 2 dB, há bombeamento.
+- `reducao_ducking_medida_dB`: quanto o ducking tirou, integrado. Não confunda com o ajuste `ducking_profundidade_db`.
+- `trilha_abertura_vs_voz_dB` e `trilha_final_vs_voz_dB`: o nível da música sem voz, comparado com a voz. Perto de 0 ou acima, a música fica tão alta quanto a narração.
+- `limitador_*`: quanto o limitador trabalha nos picos.
+- `final_I` e `final_TP`.
 
 Você não ouve o resultado. Diga isso e deixe claro que a avaliação foi só por medição.
 
 ## Etapa 5: Entrega
 
-Na pasta de entrega devem ficar:
-- `<nome>.mp4`;
-- `<nome>_revisao.jpg`;
-- `plano.json`, com os caminhos ajustados se você mover os arquivos;
-- uma cópia de `scripts/montagem.py`, para o usuário refazer com ajustes;
-- `medicoes.json`, `mapa_de_corte.md` e `RELATORIO.md`.
+O render já deixa na entrega o MP4, a revisão, `plano.json`, `montagem.py`, `medicoes.json` e `mapa_de_corte.md`. Falta escrever `RELATORIO.md` com `references/relatorio_modelo.md`. Se o usuário for refazer em outra máquina, avise que ele precisa trocar os caminhos em `arquivos` no `plano.json`.
 
-Não entregue `_trabalho/`. Use `references/relatorio_modelo.md` para o relatório. Envie os arquivos ao usuário com a ferramenta de arquivos, se houver, e faça commit se estiver num repositório.
+Envie os arquivos ao usuário com a ferramenta de arquivos, se houver. Faça commit só se o usuário pediu ou se o ambiente exige.
 
 O relatório **não esconde nada**:
 - onde você se afastou do pedido literal, e por quê;
@@ -147,6 +148,7 @@ Tudo fica em `plano.json`, nas chaves `video` e `audio`. Os padrões estão no t
 | `video.abertura_s` / `final_s` | 1,5 / 3,5 | quadro parado antes da narração / tempo depois da última palavra |
 | `video.antecipar_quadros` | 2 | o corte cai N quadros antes da frase |
 | `video.vel_min` / `vel_max` | 0,67 / 1,33 | limites de velocidade |
+| `video.aviso_congelamento_total_pct` | 8 | aviso quando o congelamento somado passa dessa % do vídeo |
 | `video.fps`, `largura`, `altura` | automático | fps mais comum; menor resolução entre os clipes (nunca aumenta) |
 | `video.ajuste` | `crop` | proporções diferentes: `crop` ou `pad` |
 | `audio.trilha_inicio_s` | sugerido | ponto da faixa onde a música começa |
